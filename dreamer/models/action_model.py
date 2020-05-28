@@ -1,38 +1,56 @@
-"""
-This file defines the core research contribution   
-"""
-import os
 import torch
-from torch.nn import functional as F
-from torch.utils.data import DataLoader
-from torchvision.datasets import MNIST
-import torchvision.transforms as transforms
-from argparse import ArgumentParser
-
-import pytorch_lightning as pl
 
 
-class CoolSystem(pl.LightningModule):
+class ActionModel(torch.nn.Module):
 
-    def __init__(self, hparams):
-        super(CoolSystem, self).__init__()
-        # not the best model...
-        self.hparams = hparams
-        self.l1 = torch.nn.Linear(28 * 28, 10)
+
+    def __init__(self, in_dim=3, out_dim=1, hparams=None):
+
+        super(RewardModel, self).__init__()
+
+        self.in_dim = in_dim
+        self.hid_dim = hid_dim
+        self.out_dim = out_dim
+        self.num_hid = num_hid
+
+        self.layer = torch.nn.ModuleDict()
+        
+        self.define_network()
+
+    def define_network(self):
+
+        self.layer["l1"] = torch.nn.Linear(self.in_dim, self.hid_dim)
+        
+        for i in range(2, self.num_hid+2):
+            self.layer["l{}".format(i)] = torch.nn.Linear(self.hid_dim, self.hid_dim)
+
+        self.layer["l{}".format(self.num_hid+2)] = torch.nn.Linear(self.hid_dim, self.out_dim)
+
+        self.leaky_relu = torch.nn.LeakyReLU()
 
     def forward(self, x):
-        return torch.relu(self.l1(x.view(x.size(0), -1)))
+
+        out = torch.Tensor(x)
+        
+        for key in self.layer.keys():
+            out = self.layer[key](out)
+            out = self.leaky_relu(out)
+
+        return out
+
+
+    def loss(self):
+        pass
 
     def training_step(self, batch, batch_idx):
-        # REQUIRED
+        
         x, y = batch
         y_hat = self.forward(x)
         loss = F.cross_entropy(y_hat, y)
-
         tensorboard_logs = {'train_loss': loss}
 
-        return {'loss': loss, 'log': tensorboard_logs}
-
+        return {'loss': loss, 'log': tensorboard_logs}  
+            
     def validation_step(self, batch, batch_idx):
         # OPTIONAL
         x, y = batch
@@ -66,15 +84,11 @@ class CoolSystem(pl.LightningModule):
 
     def train_dataloader(self):
         # REQUIRED
-        return DataLoader(MNIST(os.getcwd(), train=True, download=True, transform=transforms.ToTensor()), batch_size=self.hparams.batch_size)
-
-    def val_dataloader(self):
-        # OPTIONAL
-        return DataLoader(MNIST(os.getcwd(), train=True, download=True, transform=transforms.ToTensor()), batch_size=self.hparams.batch_size)
-
-    def test_dataloader(self):
-        # OPTIONAL
-        return DataLoader(MNIST(os.getcwd(), train=True, download=True, transform=transforms.ToTensor()), batch_size=self.hparams.batch_size)
+        """
+        return DataLoader(MNIST(os.getcwd(), train=True, download=True,
+         transform=transforms.ToTensor()), batch_size=self.hparams.batch_size)
+        """
+        pass
 
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -91,3 +105,10 @@ class CoolSystem(pl.LightningModule):
 
         return parser
 
+def main():
+    p = ValueNetwork(3, 3, 3, 5)
+    p.forward(torch.ones(10, 3))
+
+
+if __name__ == "__main__":
+    main()

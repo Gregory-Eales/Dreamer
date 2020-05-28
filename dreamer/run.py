@@ -38,7 +38,19 @@ if __name__ == '__main__':
     train_data = DataLoader(MNIST(os.getcwd(), train=True, download=True, transform=transforms.ToTensor()), batch_size=32)
 
     parser = ArgumentParser(add_help=False)
+    
+
+    # dreamer hyperparameters
+    parser.add_argument('--seed_episodes', default=10, type=int)
+    parser.add_argument('--collect_interval', default=0.02, type=float)
+    parser.add_argument('--batch_size', default=0.02, type=float)
+    parser.add_argument('--sequence_length', default=0.02, type=float)
+    parser.add_argument('--imagination_horizon', default=0.02, type=float)
     parser.add_argument('--learning_rate', default=0.02, type=float)
+
+
+
+
 
     # add args from trainer
     parser = pl.Trainer.add_argparse_args(parser)
