@@ -44,14 +44,14 @@ python run.py
 
 ## Baselines    
 List your baselines here.   
-- [Research MNIST](https://github.com/PyTorchLightning/pytorch-lightning-conference-seed/tree/master/src/research_mnist) 
+- [Original Repo](https://github.com/google-research/dreamer) 
 
 ### Citation   
 ```
-@article{YourName,
-  title={Your Title},
-  author={Your team},
-  journal={Location},
-  year={Year}
+@article{hafner2019dreamer,
+  title={Dream to Control: Learning Behaviors by Latent Imagination},
+  author={Hafner, Danijar and Lillicrap, Timothy and Ba, Jimmy and Norouzi, Mohammad},
+  journal={arXiv preprint arXiv:1912.01603},
+  year={2019}
 }
 ```   
