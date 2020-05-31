@@ -2,10 +2,13 @@ import gym
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 
-from .agent import Agent
 from .replay_buffer import ReplayBuffer
-from .world_model import WorldModel
-from .disagreement_ensamble import DE
+
+from .action_model import ActionModel
+from .representation_model import RepresentationModel
+from .transition_model import TransitionModel
+from .reward_model import RewardModel
+from .value_model import ValueModel
 
 
 class Dreamer(object):
@@ -22,15 +25,14 @@ class Dreamer(object):
         self.hparams = add_model_specific_args(hparams, self.obs_dim, self.act_dim)
 
         self.replay_buffer = ReplayBuffer(self.hparams)
-        self.world_model = WorldModel(self.hparams, self.obs_dim, self.act_dim)
-        self.de = DE(self.hparams, self.obs_dim, self.act_dim)
 
-        # exploration actor critic
-        #self.exp_actor_critic = Agent(self.hparams)
-
-        # task actor critic
-        #self.task_actor_critic = Agent(self.hparams)
-
+        # models
+        self.representation_model = RepresentationModel(hparams=hparams)
+        self.transition_model = TransitionModel(hparams=hparams)
+        self.reward_model = RewardModel(hparams=hparams)
+        self.action_model = ActionModel(hparams=hparams)
+        self.value_model = ValueModel(hparams=hparams)
+        
         # trainers
         self.representation_trainer = pl.Trainer(gpus=self.hparams.gpu, max_epochs=self.hparams.num_epochs)
         self.transition_trainer = pl.Trainer(gpus=self.hparams.gpu, max_epochs=self.hparams.num_epochs)
@@ -38,9 +40,10 @@ class Dreamer(object):
         self.action_trainer = pl.Trainer(gpus=self.hparams.gpu, max_epochs=self.hparams.num_epochs)
         self.value_trainer = pl.Trainer(gpus=self.hparams.gpu, max_epochs=self.hparams.num_epochs)
 
+
     def dreamer(self):
 
-        self.initial_random_explore()
+        self.seed_random_episodes()
         
         while True:
 
@@ -50,7 +53,7 @@ class Dreamer(object):
 
             self.interact_environment()
 
-    def initial_random_explore(self):
+    def seed_random_episodes(self):
         
         for e in range(self.hparams.num_explore_episodes):
 
@@ -100,22 +103,26 @@ class Dreamer(object):
     def distil_r(self):
         pass
 
-    def fit_world_model(self):
+    def fit_representation_model(self):
 
         dl = DataLoader(self.replay_buffer, batch_size=self.hparams.batch_size)
-        self.world_model_trainer.fit(self.world_model, train_dataloader=dl)
+        self.representation_trainer.fit(self.representation_model, train_dataloader=dl)
 
-    def fit_de(self):
+    def fit_action_model(self):
         dl = DataLoader(self.replay_buffer, batch_size=self.hparams.batch_size)
-        self.de_trainer.fit(self.de, train_dataloader=self.replay_buffer)
+        self.de_trainer.fit(self.action_model, train_dataloader=self.replay_buffer)
 
-    def fit_exp_ac(self):
+    def fit_transition_model(self):
         dl = DataLoader(self.replay_buffer, batch_size=self.hparams.batch_size)
-        self.exp_ac_trainer.fit(self.exp_actor_critic, train_dataloader=self.replay_buffer)
+        self.action_trainer.fit(self.transition_model, train_dataloader=self.replay_buffer)
 
-    def fit_task_ac(self):
+    def fit_reward_model(self):
         dl = DataLoader(self.replay_buffer, batch_size=self.hparams.batch_size)
-        self.task_ac_trainer.fit(self.task_actor_critic, train_dataloader=self.replay_buffer)
+        self.reward_trainer.fit(self.reward_model, train_dataloader=self.replay_buffer)
+
+    def fit_value_model(self):
+        dl = DataLoader(self.replay_buffer, batch_size=self.hparams.batch_size)
+        self.value_trainer.fit(self.value_model, train_dataloader=self.replay_buffer)
 
     @staticmethod
     def add_model_specific_args(parent_parser, obs_sz, act_sz):

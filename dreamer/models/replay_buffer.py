@@ -4,7 +4,7 @@ from torch.utils.data import IterableDataset, Dataset
 
 class ReplayBuffer(Dataset):
 
-    def __init__(self, hparams, obs_dim, act_dim):
+    def __init__(self, hparams):
 
         super(ReplayBuffer, self).__init__()
 

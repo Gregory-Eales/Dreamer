@@ -4,7 +4,7 @@ import torch
 class TransitionModel(torch.nn.Module):
 
 
-	def __init__(self, in_dim=3, out_dim=1, hparams=None):
+	def __init__(self, hparams=None):
 
 		super(TransitionModel, self).__init__()
 
