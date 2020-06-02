@@ -13,22 +13,26 @@ class RepresentationModel(torch.nn.Module):
 		self.out_dim = out_dim
 		self.num_hid = num_hid
 
-		self.layer = torch.nn.ModuleDict()
+		self.res = torch.nn.ModuleDict()
 		
 		self.define_network()
 
 	def define_network(self):
 
-		self.layer["l1"] = torch.nn.Linear(self.in_dim, self.hid_dim)
-		
-		for i in range(2, self.num_hid+2):
-			self.layer["l{}".format(i)] = torch.nn.Linear(self.hid_dim, self.hid_dim)
-
-		self.layer["l{}".format(self.num_hid+2)] = torch.nn.Linear(self.hid_dim, self.out_dim)
+		self.conv1 = torch.nn.Conv2d(3, 64, kernal_size=3)
+		self.conv1 = torch.nn.Conv2d(256, 64, kernal_size=3)
+		self.conv1 = torch.nn.Conv2d(256, 64, kernal_size=3)
 
 		self.leaky_relu = torch.nn.LeakyReLU()
 
-	def forward(self, x):
+	def forward(self, obs, prev_s, prev_a):
+
+
+		# Apply convolution to observation input
+
+		# concat conv-output, prev_s, and prev_a
+
+		# apply linear forward to output s, same dim as prev_s
 
 		out = torch.Tensor(x)
 		
@@ -40,6 +44,8 @@ class RepresentationModel(torch.nn.Module):
 
 
 	def loss(self):
+
+		# should probably be MSE
 		pass
 
 	def training_step(self, batch, batch_idx):

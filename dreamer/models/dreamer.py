@@ -1,6 +1,7 @@
 import gym
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
+from argparse import ArgumentParser
 
 from .replay_buffer import ReplayBuffer
 
@@ -11,7 +12,7 @@ from .reward_model import RewardModel
 from .value_model import ValueModel
 
 
-class Dreamer(object):
+class Dreamer(pl.LightningModule):
 
     def __init__(self, hparams):
         
@@ -19,10 +20,13 @@ class Dreamer(object):
 
         self.env = gym.make(self.hparams.env)
 
-        self.obs_dim = self.env.observation_space.shape[0]
-        self.act_dim = self.env.action_space.shape[0]
+        self.obs_dim = self.env.observation_space.shape
+        self.act_dim = self.env.action_space.shape
 
-        self.hparams = add_model_specific_args(hparams, self.obs_dim, self.act_dim)
+
+        #print(self.obs_dim)
+
+        #self.hparams = self.add_model_specific_args(hparams, self.obs_dim, self.act_dim)
 
         self.replay_buffer = ReplayBuffer(self.hparams)
 
@@ -34,14 +38,12 @@ class Dreamer(object):
         self.value_model = ValueModel(hparams=hparams)
         
         # trainers
-        self.representation_trainer = pl.Trainer(gpus=self.hparams.gpu, max_epochs=self.hparams.num_epochs)
-        self.transition_trainer = pl.Trainer(gpus=self.hparams.gpu, max_epochs=self.hparams.num_epochs)
-        self.reward_trainer = pl.Trainer(gpus=self.hparams.gpu, max_epochs=self.hparams.num_epochs)
-        self.action_trainer = pl.Trainer(gpus=self.hparams.gpu, max_epochs=self.hparams.num_epochs)
-        self.value_trainer = pl.Trainer(gpus=self.hparams.gpu, max_epochs=self.hparams.num_epochs)
+        self.trainer = pl.Trainer(gpus=self.hparams.gpu, max_epochs=self.hparams.num_epochs)
 
+    def forward(self):
+        pass
 
-    def dreamer(self):
+    def dream(self):
 
         self.seed_random_episodes()
         
@@ -103,26 +105,61 @@ class Dreamer(object):
     def distil_r(self):
         pass
 
-    def fit_representation_model(self):
+    def training_step(self, batch, batch_idx):
+        
+        x, y = batch
+        y_hat = self.forward(x)
+        loss = F.cross_entropy(y_hat, y)
+        tensorboard_logs = {'train_loss': loss}
 
-        dl = DataLoader(self.replay_buffer, batch_size=self.hparams.batch_size)
-        self.representation_trainer.fit(self.representation_model, train_dataloader=dl)
+        return {'loss': loss, 'log': tensorboard_logs}  
+            
+    def validation_step(self, batch, batch_idx):
+        # OPTIONAL
+        x, y = batch
+        y_hat = self.forward(x)
+        return {'val_loss': F.cross_entropy(y_hat, y)}
 
-    def fit_action_model(self):
-        dl = DataLoader(self.replay_buffer, batch_size=self.hparams.batch_size)
-        self.de_trainer.fit(self.action_model, train_dataloader=self.replay_buffer)
+    def validation_epoch_end(self, outputs):
+        # OPTIONAL
+        avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
 
-    def fit_transition_model(self):
-        dl = DataLoader(self.replay_buffer, batch_size=self.hparams.batch_size)
-        self.action_trainer.fit(self.transition_model, train_dataloader=self.replay_buffer)
+        tensorboard_logs = {'avg_val_loss': avg_loss}
+        return {'val_loss': avg_loss, 'log': tensorboard_logs}
 
-    def fit_reward_model(self):
-        dl = DataLoader(self.replay_buffer, batch_size=self.hparams.batch_size)
-        self.reward_trainer.fit(self.reward_model, train_dataloader=self.replay_buffer)
+    def test_step(self, batch, batch_idx):
+        # OPTIONAL
+        x, y = batch
+        y_hat = self.forward(x)
+        return {'test_loss': F.cross_entropy(y_hat, y)}
 
-    def fit_value_model(self):
-        dl = DataLoader(self.replay_buffer, batch_size=self.hparams.batch_size)
-        self.value_trainer.fit(self.value_model, train_dataloader=self.replay_buffer)
+    def test_epoch_end(self, outputs):
+        # OPTIONAL
+        avg_loss = torch.stack([x['test_loss'] for x in outputs]).mean()
+
+        tensorboard_logs = {'test_val_loss': avg_loss}
+        return {'test_loss': avg_loss, 'log': tensorboard_logs}
+
+    def configure_optimizers(self):
+    
+        lr = self.hparams.lr
+        b1 = self.hparams.b1
+        b2 = self.hparams.b2
+
+        opt_representation = torch.optim.Adam(self.representation_model.parameters(), lr=lr, betas=(b1, b2))
+        opt_transition = torch.optim.Adam(self.transition_model.parameters(), lr=lr, betas=(b1, b2))
+        opt_reward = torch.optim.Adam(self.reward_model.parameters(), lr=lr, betas=(b1, b2))
+        opt_action = torch.optim.Adam(self.action_model.parameters(), lr=lr, betas=(b1, b2))
+        opt_value = torch.optim.Adam(self.value_model.parameters(), lr=lr, betas=(b1, b2))
+        return [opt_representation, opt_transition, opt_reward, opt_action, opt_value], []
+
+    def train_dataloader(self):
+        # REQUIRED
+        """
+        return DataLoader(MNIST(os.getcwd(), train=True, download=True,
+         transform=transforms.ToTensor()), batch_size=self.hparams.batch_size)
+        """
+        pass
 
     @staticmethod
     def add_model_specific_args(parent_parser, obs_sz, act_sz):
@@ -131,11 +168,12 @@ class Dreamer(object):
         """
         # MODEL specific
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
-        parser.add_argument('--observation_size', default=obs_sz, type=float)
+        parser.add_argument('--observation_size', default=obs_sz, type=tuple)
         parser.add_argument('--action_size', default=act_sz, type=int)
 
         # training specific (for this model)
-        parser.add_argument('--max_nb_epochs', default=2, type=int)
+        #parser.add_argument('--max_nb_epochs', default=2, type=int)
+
 
         return parser
 

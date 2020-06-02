@@ -28,7 +28,11 @@ class TransitionModel(torch.nn.Module):
 
 		self.leaky_relu = torch.nn.LeakyReLU()
 
-	def forward(self, x):
+	def forward(self, state, action):
+
+		# linear model, takes state and action, predicts next state
+
+		x = torch.cat([state, action], dim=1)
 
 		out = torch.Tensor(x)
 		

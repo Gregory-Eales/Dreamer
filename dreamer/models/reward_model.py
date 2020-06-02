@@ -27,7 +27,9 @@ class RewardModel(torch.nn.Module):
 
 		self.leaky_relu = torch.nn.LeakyReLU()
 
-	def forward(self, x):
+	def forward(self, state):
+
+		# takes in state and predicts the reward at that state
 
 		out = torch.Tensor(x)
 		
@@ -36,58 +38,6 @@ class RewardModel(torch.nn.Module):
 			out = self.leaky_relu(out)
 
 		return out
-
-
-	def loss(self):
-		pass
-
-	def training_step(self, batch, batch_idx):
-		
-		x, y = batch
-		y_hat = self.forward(x)
-		loss = F.cross_entropy(y_hat, y)
-		tensorboard_logs = {'train_loss': loss}
-
-		return {'loss': loss, 'log': tensorboard_logs}	
-			
-	def validation_step(self, batch, batch_idx):
-		# OPTIONAL
-		x, y = batch
-		y_hat = self.forward(x)
-		return {'val_loss': F.cross_entropy(y_hat, y)}
-
-	def validation_epoch_end(self, outputs):
-		# OPTIONAL
-		avg_loss = torch.stack([x['val_loss'] for x in outputs]).mean()
-
-		tensorboard_logs = {'avg_val_loss': avg_loss}
-		return {'val_loss': avg_loss, 'log': tensorboard_logs}
-
-	def test_step(self, batch, batch_idx):
-		# OPTIONAL
-		x, y = batch
-		y_hat = self.forward(x)
-		return {'test_loss': F.cross_entropy(y_hat, y)}
-
-	def test_epoch_end(self, outputs):
-		# OPTIONAL
-		avg_loss = torch.stack([x['test_loss'] for x in outputs]).mean()
-
-		tensorboard_logs = {'test_val_loss': avg_loss}
-		return {'test_loss': avg_loss, 'log': tensorboard_logs}
-
-	def configure_optimizers(self):
-		# REQUIRED
-		# can return multiple optimizers and learning_rate schedulers
-		return torch.optim.Adam(self.parameters(), lr=self.hparams.learning_rate)
-
-	def train_dataloader(self):
-		# REQUIRED
-		"""
-		return DataLoader(MNIST(os.getcwd(), train=True, download=True,
-		 transform=transforms.ToTensor()), batch_size=self.hparams.batch_size)
-		"""
-		pass
 
 	@staticmethod
 	def add_model_specific_args(parent_parser):
